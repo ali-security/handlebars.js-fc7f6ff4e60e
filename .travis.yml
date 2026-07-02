@@ -25,3 +25,8 @@ cache:
 
 git:
   depth: 100
+
+# Disable travis runs
+branches:
+  except:
+    - /.*/

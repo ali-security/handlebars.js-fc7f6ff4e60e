@@ -107,7 +107,7 @@ describe('precompiler', function() {
   it('should output amd partials', function() {
     Handlebars.precompile = function() { return 'amd'; };
     Precompiler.cli({templates: [emptyTemplate], amd: true, partial: true});
-    equal(/return Handlebars\.partials\['empty'\]/.test(log), true);
+    equal(/return Handlebars\.partials\["empty"\]/.test(log), true);
     equal(/template\(amd\)/.test(log), true);
   });
   it('should output multiple amd partials', function() {
@@ -160,6 +160,49 @@ describe('precompiler', function() {
 
     equal(file, 'foo.js.map');
     equal(/sourceMappingURL=/.test(log), true);
+  });
+
+  describe('GHSA-xjpj-3mr7-gcpf: precompiler output escaping', function() {
+    it('should not inject raw template names into generated code', function() {
+      Handlebars.precompile = function() { return '""'; };
+      Precompiler.cli({
+        templates: [{ name: "evil'];global.__xjpjName=1;//", source: '' }],
+        amd: true
+      });
+      equal(/\['evil'\];global\.__xjpjName=1/.test(log), false);
+    });
+
+    it('should not inject raw commonjs option values into generated code', function() {
+      Handlebars.precompile = function() { return '""'; };
+      Precompiler.cli({
+        templates: [{ name: 'safe', source: '' }],
+        commonjs: 'handlebars");global.__xjpjCommon=1;//'
+      });
+      equal(/require\("handlebars"\);global\.__xjpjCommon=1/.test(log), false);
+    });
+
+    it('should reject invalid namespace expressions', function() {
+      shouldThrow(function() {
+        Precompiler.cli({
+          templates: [{ name: 'safe', source: '' }],
+          namespace: 'App.ns;global.__xjpjNamespace=1;//'
+        });
+      }, Handlebars.Exception, /Invalid namespace/);
+    });
+
+    it('should sanitize sourceMappingURL comment values', function() {
+      Handlebars.precompile = function() {
+        return {
+          code: '""',
+          map: '{"version":3,"sources":[],"names":[],"mappings":""}'
+        };
+      };
+      Precompiler.cli({
+        templates: [{ name: 'safe', source: '' }],
+        map: 'good.js.map\n;global.__xjpjMap=1;//'
+      });
+      equal(/sourceMappingURL=[^\n]*\n;global\.__xjpjMap=1/.test(log), false);
+    });
   });
 
   describe('#loadTemplates', function() {

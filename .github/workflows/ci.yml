@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['0.12', '4.0.0']
+    name: Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # Old Node's bundled CA store predates the roots fronting the npm
+      # registry, so cert verification fails. Disable strict-ssl to get past it.
+      - name: Configure npm for legacy Node
+        run: npm config set strict-ssl false
+
+      - name: Build & test
+        run: |
+          npm install -g grunt-cli@1.1.0
+          npm install
+          npm test

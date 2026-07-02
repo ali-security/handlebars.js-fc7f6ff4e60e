@@ -30,6 +30,13 @@ describe('runtime', function() {
         });
       }, Error, /Template was precompiled with an older version of Handlebars than the current runtime/);
     });
+
+    it('should safely resolve missing partial map entries', function() {
+      equal(
+        Handlebars.VM.resolvePartial(undefined, {}, { name: 'missing' }),
+        undefined
+      );
+    });
   });
 
   describe('#child', function() {
